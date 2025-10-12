@@ -1,0 +1,118 @@
+name: Publish NuGet Packages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-sharedClasses:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Restore SharedClasses dependencies
+        run: dotnet restore KarizmaInventory.SharedClasses/KarizmaInventory.SharedClasses.csproj
+
+      - name: Build SharedClasses project
+        run: dotnet build KarizmaInventory.SharedClasses/KarizmaInventory.SharedClasses.csproj --configuration Release --no-restore
+
+      - name: Pack SharedClasses project
+        run: dotnet pack KarizmaInventory.SharedClasses/KarizmaInventory.SharedClasses.csproj --configuration Release --no-build --output ./nupkg
+
+      - name: Publish SharedClasses package to NuGet
+        run: dotnet nuget push "./nupkg/*.nupkg" --api-key ${{ secrets.KARIZMAINVENTORY_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ secrets.KARIZMAINVENTORY_API_KEY }}
+  
+  build-domain:
+    runs-on: ubuntu-latest
+    needs: build-sharedClasses
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore Domain dependencies
+        run: dotnet restore KarizmaInventory.Domain/KarizmaInventory.Domain.csproj
+
+      - name: Build Domain project
+        run: dotnet build KarizmaInventory.Domain/KarizmaInventory.Domain.csproj --configuration Release --no-restore
+
+      - name: Pack Domain project
+        run: dotnet pack KarizmaInventory.Domain/KarizmaInventory.Domain.csproj --configuration Release --no-build --output ./nupkg
+
+      - name: Publish Domain package to NuGet
+        run: dotnet nuget push "./nupkg/*.nupkg" --api-key ${{ secrets.KARIZMAINVENTORY_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ secrets.KARIZMAINVENTORY_API_KEY }}
+  
+  
+  build-infrastructure:
+    runs-on: ubuntu-latest
+    needs: build-domain
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore Infrastructure dependencies
+        run: dotnet restore KarizmaInventory.Infrastructure/KarizmaInventory.Infrastructure.csproj
+
+      - name: Build Infrastructure project
+        run: dotnet build KarizmaInventory.Infrastructure/KarizmaInventory.Infrastructure.csproj --configuration Release --no-restore
+
+      - name: Pack Infrastructure project
+        run: dotnet pack KarizmaInventory.Infrastructure/KarizmaInventory.Infrastructure.csproj --configuration Release --no-build --output ./nupkg
+
+      - name: Publish Infrastructure package to NuGet
+        run: dotnet nuget push "./nupkg/*.nupkg" --api-key ${{ secrets.KARIZMAINVENTORY_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ secrets.KARIZMAINVENTORY_API_KEY }}
+  
+  
+  build-application:
+    runs-on: ubuntu-latest
+    needs: build-infrastructure
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore Application dependencies
+        run: dotnet restore KarizmaInventory.Application/KarizmaInventory.Application.csproj
+
+      - name: Build Application project
+        run: dotnet build KarizmaInventory.Application/KarizmaInventory.Application.csproj --configuration Release --no-restore
+
+      - name: Pack Application project
+        run: dotnet pack KarizmaInventory.Application/KarizmaInventory.Application.csproj --configuration Release --no-build --output ./nupkg
+
+      - name: Publish Application package to NuGet
+        run: dotnet nuget push "./nupkg/*.nupkg" --api-key ${{ secrets.KARIZMAINVENTORY_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ secrets.KARIZMAINVENTORY_API_KEY }}
+
