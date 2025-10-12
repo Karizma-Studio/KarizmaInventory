@@ -249,28 +249,6 @@ KarizmaInventory.Application      (Business logic, processors)
 - **Self-contained DI**: `AddKarizmaInventory()` handles all service registrations internally
 - **Database Agnostic Interface**: Consumer provides database implementation via generic parameter
 
-## 🔄 Changelog
-
-### v0.4.0
-- **Breaking**: Removed `BaseContext` dependency from repositories
-- **Breaking**: DTOs now use `TEnum` and `TPrice` directly instead of strings
-- Added `IsFree` boolean flag to `InventoryItemDto` 
-- Added `GetAvailableInventoryItemsByType()` method
-- Added `GetEquippedItemsDictionary()` method
-- Improved data integrity with automatic deduplication in equipped items
-- Repositories now follow KarizmaResource pattern (implement `IRepository<T>` but use only database interface)
-
-### v0.3.0
-- Enhanced DTOs with generic type parameters
-- Added sorting by `DisplayOrder`
-- Improved equipped items handling
-
-### v0.2.0
-- Added comprehensive README
-- Initial stable release
-
-### v0.1.0
-- Initial release
 
 ## 🤝 Contributing
 
