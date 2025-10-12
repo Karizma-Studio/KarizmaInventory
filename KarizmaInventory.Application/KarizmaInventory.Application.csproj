@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <AssemblyName>KarizmaInventory.Application</AssemblyName>
         <RootNamespace>KarizmaPlatform.Inventory.Application</RootNamespace>
-        <Version>0.2.0</Version>
+        <Version>0.3.0</Version>
         <Title>Karizma Inventory Application</Title>
         <Authors>Karizma Studio</Authors>
         <Description>Application Layer of Karizma Inventory System</Description>

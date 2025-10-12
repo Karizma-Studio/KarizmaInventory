@@ -1,3 +1,4 @@
+using System.Text.Json;
 using KarizmaPlatform.Inventory.Application.Processors.Interfaces;
 using KarizmaPlatform.Inventory.Domain.Models;
 using KarizmaPlatform.Inventory.Infrastructure.Repositories.Interfaces;
@@ -9,24 +10,52 @@ public class InventoryProcessor<TEnum, TPrice>(
     IUserInventoryItemRepository userInventoryItemRepository,
     IInventoryItemRepository inventoryItemRepository) : IInventoryProcessor<TEnum, TPrice> where TEnum : struct, Enum
 {
-    public async Task<List<InventoryItemDto>> GetAvailableInventoryItems(long userId)
+    public async Task<List<InventoryItemDto<TEnum, TPrice>>> GetAvailableInventoryItems(long userId)
     {
         var allItems = await inventoryItemRepository.GetAll();
         var userItems = await userInventoryItemRepository.FindUserInventoryItems(userId, false);
         var userItemIds = userItems.Select(ui => ui.InventoryItemId).ToHashSet();
         var equippedItemIds = userItems.Where(ui => ui.IsEquipped).Select(ui => ui.InventoryItemId).ToHashSet();
 
-        return allItems.Select(item => new InventoryItemDto
+        return allItems.Select(item =>
         {
-            Id = item.Id,
-            AssetKey = item.AssetKey,
-            Type = item.Type,
-            Price = item.Price,
-            DisplayOrder = item.DisplayOrder,
-            CanBePurchased = item.CanBePurchased,
-            IsOwned = userItemIds.Contains(item.Id),
-            IsEquipped = equippedItemIds.Contains(item.Id)
-        }).ToList();
+            var isFree = string.IsNullOrEmpty(item.Price) || item.Price == "null";
+            var price = isFree ? default(TPrice)! : (DeserializePrice(item.Price) ?? default(TPrice)!);
+            
+            return new InventoryItemDto<TEnum, TPrice>
+            {
+                Id = item.Id,
+                AssetKey = item.AssetKey,
+                Type = Enum.Parse<TEnum>(item.Type),
+                Price = price,
+                IsFree = isFree,
+                DisplayOrder = item.DisplayOrder,
+                CanBePurchased = item.CanBePurchased,
+                IsOwned = userItemIds.Contains(item.Id),
+                IsEquipped = equippedItemIds.Contains(item.Id)
+            };
+        }).OrderBy(item => item.DisplayOrder).ToList();
+    }
+
+    public async Task<List<InventoryItemDto<TEnum, TPrice>>> GetAvailableInventoryItemsByType(long userId, TEnum itemType)
+    {
+        var allItems = await GetAvailableInventoryItems(userId);
+        return allItems.Where(item => item.Type.Equals(itemType)).ToList();
+    }
+
+    private TPrice? DeserializePrice(string? priceJson)
+    {
+        if (string.IsNullOrEmpty(priceJson) || priceJson == "null")
+            return default;
+
+        try
+        {
+            return JsonSerializer.Deserialize<TPrice>(priceJson);
+        }
+        catch
+        {
+            return default;
+        }
     }
 
     public async Task<bool> AddInventoryItemToUser(long userId, long inventoryItemId)
@@ -186,28 +215,54 @@ public class InventoryProcessor<TEnum, TPrice>(
         }
     }
 
-    public async Task<List<UserInventoryItemDto>> GetEquippedItems(long userId)
+    public async Task<List<UserInventoryItemDto<TEnum, TPrice>>> GetEquippedItems(long userId)
     {
         var equippedItems = await userInventoryItemRepository.FindEquippedItems(userId, false);
         
-        return equippedItems.Select(ui => new UserInventoryItemDto
+        // Group by type and take only the first equipped item per type (in case of manual DB edits)
+        var uniqueEquippedItems = equippedItems
+            .Where(ui => ui.InventoryItem != null)
+            .GroupBy(ui => ui.InventoryItem!.Type)
+            .Select(g => g.First())
+            .ToList();
+        
+        return uniqueEquippedItems.Select(ui =>
         {
-            Id = ui.Id,
-            UserId = ui.UserId,
-            InventoryItemId = ui.InventoryItemId,
-            IsEquipped = ui.IsEquipped,
-            InventoryItem = ui.InventoryItem == null ? null : new InventoryItemDto
+            var isFree = string.IsNullOrEmpty(ui.InventoryItem!.Price) || ui.InventoryItem.Price == "null";
+            var price = isFree ? default(TPrice)! : (DeserializePrice(ui.InventoryItem.Price) ?? default(TPrice)!);
+            
+            return new UserInventoryItemDto<TEnum, TPrice>
             {
-                Id = ui.InventoryItem.Id,
-                AssetKey = ui.InventoryItem.AssetKey,
-                Type = ui.InventoryItem.Type,
-                Price = ui.InventoryItem.Price,
-                DisplayOrder = ui.InventoryItem.DisplayOrder,
-                CanBePurchased = ui.InventoryItem.CanBePurchased,
-                IsOwned = true,
-                IsEquipped = ui.IsEquipped
-            }
-        }).ToList();
+                Id = ui.Id,
+                UserId = ui.UserId,
+                InventoryItemId = ui.InventoryItemId,
+                IsEquipped = ui.IsEquipped,
+                InventoryItem = new InventoryItemDto<TEnum, TPrice>
+                {
+                    Id = ui.InventoryItem.Id,
+                    AssetKey = ui.InventoryItem.AssetKey,
+                    Type = Enum.Parse<TEnum>(ui.InventoryItem.Type),
+                    Price = price,
+                    IsFree = isFree,
+                    DisplayOrder = ui.InventoryItem.DisplayOrder,
+                    CanBePurchased = ui.InventoryItem.CanBePurchased,
+                    IsOwned = true,
+                    IsEquipped = ui.IsEquipped
+                }
+            };
+        }).OrderBy(ui => ui.InventoryItem!.DisplayOrder).ToList();
+    }
+
+    public async Task<Dictionary<TEnum, UserInventoryItemDto<TEnum, TPrice>>> GetEquippedItemsDictionary(long userId)
+    {
+        var equippedItems = await GetEquippedItems(userId);
+        
+        return equippedItems
+            .Where(ui => ui.InventoryItem != null)
+            .ToDictionary(
+                ui => ui.InventoryItem!.Type,
+                ui => ui
+            );
     }
 }
 
