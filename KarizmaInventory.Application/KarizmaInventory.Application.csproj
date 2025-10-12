@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AssemblyName>KarizmaInventory.Application</AssemblyName>
+        <RootNamespace>KarizmaPlatform.Inventory.Application</RootNamespace>
+        <Version>1.0.0</Version>
+        <Title>Karizma Inventory Application</Title>
+        <Authors>Karizma Studio</Authors>
+        <Description>Application Layer of Karizma Inventory System</Description>
+        <PackageTags>EFCore, Server, Clean Architecture, Inventory Management</PackageTags>
+        <RepositoryUrl>https://github.com/Karizma-Studio/KarizmaInventory</RepositoryUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\KarizmaInventory.Domain\KarizmaInventory.Domain.csproj" />
+      <ProjectReference Include="..\KarizmaInventory.Infrastructure\KarizmaInventory.Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>
+
