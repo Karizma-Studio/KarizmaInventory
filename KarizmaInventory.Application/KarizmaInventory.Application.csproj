@@ -17,6 +17,7 @@
     <ItemGroup>
       <ProjectReference Include="..\KarizmaInventory.Domain\KarizmaInventory.Domain.csproj" />
       <ProjectReference Include="..\KarizmaInventory.Infrastructure\KarizmaInventory.Infrastructure.csproj" />
+      <ProjectReference Include="..\KarizmaInventory.SharedClasses\KarizmaInventory.SharedClasses.csproj" />
     </ItemGroup>
 
 </Project>
