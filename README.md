@@ -261,7 +261,6 @@ This project is licensed under the MIT License.
 ## 🔗 Links
 
 - [GitHub Repository](https://github.com/Karizma-Studio/KarizmaInventory)
-- [NuGet Package](https://www.nuget.org/packages/KarizmaInventory.Application)
 - [Issues](https://github.com/Karizma-Studio/KarizmaInventory/issues)
 
 ## 💡 Support
