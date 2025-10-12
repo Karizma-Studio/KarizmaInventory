@@ -12,7 +12,7 @@ public class InventoryDatabaseUtilities
     {
         modelBuilder.HasPostgresEnum<TEnum>();
         
-        var enumTypeName = typeof(TEnum).Name.ToLower().Replace("type", "_type");
+        var enumTypeName = ConvertToSnakeCase(typeof(TEnum).Name);
         
         modelBuilder.Entity<InventoryItem>()
             .Property(b => b.Type)
@@ -50,8 +50,32 @@ public class InventoryDatabaseUtilities
     
     public static void MapEnums<TEnum>(NpgsqlDataSourceBuilder dataSourceBuilder) where TEnum : struct, Enum
     {
-        var enumTypeName = typeof(TEnum).Name.ToLower().Replace("type", "_type");
+        var enumTypeName = ConvertToSnakeCase(typeof(TEnum).Name);
         dataSourceBuilder.MapEnum<TEnum>(enumTypeName);
+    }
+    
+    private static string ConvertToSnakeCase(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return input;
+
+        var result = new System.Text.StringBuilder();
+        result.Append(char.ToLowerInvariant(input[0]));
+
+        for (int i = 1; i < input.Length; i++)
+        {
+            if (char.IsUpper(input[i]))
+            {
+                result.Append('_');
+                result.Append(char.ToLowerInvariant(input[i]));
+            }
+            else
+            {
+                result.Append(input[i]);
+            }
+        }
+
+        return result.ToString();
     }
 }
 
