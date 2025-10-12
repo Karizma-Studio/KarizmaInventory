@@ -4,14 +4,16 @@ A flexible and generic inventory management system for .NET applications, design
 
 ## 🚀 Features
 
-- **Generic Type System**: Define your own item types using enums
+- **Generic Type System**: Define your own item types (`TEnum`) and price types (`TPrice`)
 - **Flexible Pricing**: Support for any currency type (int, custom classes) stored as JSONB
 - **Equipment System**: Users can equip one item per type simultaneously
-- **Free Items**: Items with null price can be equipped without purchase
-- **Clean Architecture**: Separated layers (Domain, Infrastructure, Application, SharedClasses)
-- **DTO-based API**: Clean data transfer objects for API responses
+- **Free Items**: Items with null/empty price can be equipped without purchase
+- **Clean Architecture**: Separated layers with zero dependency on BaseContext
+- **DTO-based API**: Strongly-typed DTOs with `TEnum` and `TPrice` generics
 - **Entity Framework Core**: Full EF Core integration with PostgreSQL
 - **Auto-unequip**: Automatically unequip items of same type when equipping new ones
+- **Type Filtering**: Get available or equipped items filtered by specific types
+- **Dictionary Access**: Retrieve equipped items as a dictionary keyed by type
 
 ## 📦 Installation
 
@@ -81,9 +83,12 @@ Add items directly to the `inventory_items` table:
 INSERT INTO inventory_items (id, asset_key, type, price, display_order, can_be_purchased)
 VALUES 
   (1, 'BlueSkin', 'Skin', '{"Coins": 100, "Gems": 0}', 1, true),
-  (2, 'RedSkin', 'Skin', null, 2, true),  -- Free item
-  (3, 'CoolAvatar', 'Avatar', '{"Coins": 200, "Gems": 5}', 1, true);
+  (2, 'RedSkin', 'Skin', null, 2, true),  -- Free item (IsFree = true)
+  (3, 'CoolAvatar', 'Avatar', '{"Coins": 200, "Gems": 5}', 1, true),
+  (4, 'DefaultSkin', 'Skin', '', 0, false); -- Free default (empty string also counts as free)
 ```
+
+**Note**: Items with `price = null` or `price = ''` are considered free and will have `IsFree = true` in the DTO.
 
 ### 5. Use the Inventory Processor
 
@@ -98,9 +103,15 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("items")]
-    public async Task<List<InventoryItemDto>> GetAvailableItems(long userId)
+    public async Task<List<InventoryItemDto<ItemType, GameCurrency>>> GetAvailableItems(long userId)
     {
         return await _processor.GetAvailableInventoryItems(userId);
+    }
+
+    [HttpGet("items/type/{type}")]
+    public async Task<List<InventoryItemDto<ItemType, GameCurrency>>> GetItemsByType(long userId, ItemType type)
+    {
+        return await _processor.GetAvailableInventoryItemsByType(userId, type);
     }
 
     [HttpPost("purchase")]
@@ -118,9 +129,15 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("equipped")]
-    public async Task<List<UserInventoryItemDto>> GetEquippedItems(long userId)
+    public async Task<List<UserInventoryItemDto<ItemType, GameCurrency>>> GetEquippedItems(long userId)
     {
         return await _processor.GetEquippedItems(userId);
+    }
+
+    [HttpGet("equipped/dictionary")]
+    public async Task<Dictionary<ItemType, UserInventoryItemDto<ItemType, GameCurrency>>> GetEquippedItemsDict(long userId)
+    {
+        return await _processor.GetEquippedItemsDictionary(userId);
     }
 
     [HttpPost("unequip-type")]
@@ -135,25 +152,49 @@ public class InventoryController : ControllerBase
 ## 📚 API Methods
 
 ### `GetAvailableInventoryItems(userId)`
-Returns all inventory items with user-specific context (IsOwned, IsEquipped).
+Returns all inventory items with user-specific context (IsOwned, IsEquipped, IsFree). Items are sorted by `DisplayOrder`.
+
+**Returns**: `List<InventoryItemDto<TEnum, TPrice>>`
+
+### `GetAvailableInventoryItemsByType(userId, itemType)`
+Returns inventory items filtered by a specific type.
+
+**Returns**: `List<InventoryItemDto<TEnum, TPrice>>`
 
 ### `AddInventoryItemToUser(userId, itemId)`
 Adds an item to user's inventory. Returns false if already owned.
 
+**Returns**: `bool`
+
 ### `EquipInventoryItem(userId, itemId)`
 Equips an item. Automatically unequips other items of the same type. Free items (price = null) are auto-added to inventory.
+
+**Returns**: `bool`
 
 ### `UnequipInventoryItemsByType(userId, itemType)`
 Unequips all items of a specific type for the user.
 
+**Returns**: `bool`
+
 ### `EquipInventoryItems(userId, itemIds)`
 Batch equip multiple items at once.
+
+**Returns**: `bool`
 
 ### `DeleteInventoryItem(userId, itemId)`
 Removes an item from user's inventory.
 
+**Returns**: `bool`
+
 ### `GetEquippedItems(userId)`
-Returns all currently equipped items with full details.
+Returns all currently equipped items with full details, sorted by `DisplayOrder`. Ensures only one item per type is returned (data integrity).
+
+**Returns**: `List<UserInventoryItemDto<TEnum, TPrice>>`
+
+### `GetEquippedItemsDictionary(userId)`
+Returns equipped items as a dictionary keyed by item type for quick lookups.
+
+**Returns**: `Dictionary<TEnum, UserInventoryItemDto<TEnum, TPrice>>`
 
 ## 🗃️ Database Schema
 
@@ -199,6 +240,37 @@ KarizmaInventory.Infrastructure   (Repositories, DB config)
          ↓
 KarizmaInventory.Application      (Business logic, processors)
 ```
+
+### Design Principles
+
+- **No BaseContext Dependency**: Repositories only depend on `IInventoryDatabase`
+- **Interface-based**: All repositories implement `IRepository<T>` from `KarizmaPlatform.Core.Logic`
+- **Generic-first**: Full generic support with `TEnum` for item types and `TPrice` for pricing
+- **Self-contained DI**: `AddKarizmaInventory()` handles all service registrations internally
+- **Database Agnostic Interface**: Consumer provides database implementation via generic parameter
+
+## 🔄 Changelog
+
+### v0.4.0
+- **Breaking**: Removed `BaseContext` dependency from repositories
+- **Breaking**: DTOs now use `TEnum` and `TPrice` directly instead of strings
+- Added `IsFree` boolean flag to `InventoryItemDto` 
+- Added `GetAvailableInventoryItemsByType()` method
+- Added `GetEquippedItemsDictionary()` method
+- Improved data integrity with automatic deduplication in equipped items
+- Repositories now follow KarizmaResource pattern (implement `IRepository<T>` but use only database interface)
+
+### v0.3.0
+- Enhanced DTOs with generic type parameters
+- Added sorting by `DisplayOrder`
+- Improved equipped items handling
+
+### v0.2.0
+- Added comprehensive README
+- Initial stable release
+
+### v0.1.0
+- Initial release
 
 ## 🤝 Contributing
 
