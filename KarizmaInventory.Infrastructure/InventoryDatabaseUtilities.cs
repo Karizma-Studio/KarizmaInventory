@@ -1,12 +1,22 @@
 using KarizmaPlatform.Inventory.Domain.Models;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace KarizmaPlatform.Inventory.Infrastructure;
 
 public class InventoryDatabaseUtilities
 {
-    public static void ConfigureDatabase<T>(ModelBuilder modelBuilder) where T : class, IInventoryUser
+    public static void ConfigureDatabase<T, TEnum>(ModelBuilder modelBuilder) 
+        where T : class, IInventoryUser
+        where TEnum : struct, Enum
     {
+        modelBuilder.HasPostgresEnum<TEnum>();
+        
+        var enumTypeName = typeof(TEnum).Name.ToLower().Replace("type", "_type");
+        
+        modelBuilder.Entity<InventoryItem>()
+            .Property(b => b.Type)
+            .HasColumnType(enumTypeName);
         modelBuilder.Entity<UserInventoryItem>()
             .HasOne<T>()
             .WithMany()
@@ -36,6 +46,12 @@ public class InventoryDatabaseUtilities
                 .Property("UpdatedDate")
                 .HasDefaultValueSql("now()");
         }
+    }
+    
+    public static void MapEnums<TEnum>(NpgsqlDataSourceBuilder dataSourceBuilder) where TEnum : struct, Enum
+    {
+        var enumTypeName = typeof(TEnum).Name.ToLower().Replace("type", "_type");
+        dataSourceBuilder.MapEnum<TEnum>(enumTypeName);
     }
 }
 

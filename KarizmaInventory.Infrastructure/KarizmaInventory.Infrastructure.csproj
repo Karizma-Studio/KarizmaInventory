@@ -5,7 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>KarizmaPlatform.Inventory.Infrastructure</RootNamespace>
-        <Version>0.4.0</Version>
+        <Version>0.5.0</Version>
         <Title>Karizma Inventory Infrastructure</Title>
         <Authors>Karizma Studio</Authors>
         <Description>Infrastructure Layer of Karizma Inventory System</Description>

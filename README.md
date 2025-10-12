@@ -59,8 +59,8 @@ public class GameDbContext : BaseContext, IInventoryDatabase
     {
         base.OnModelCreating(modelBuilder);
         
-        // Configure inventory system with your User entity
-        InventoryDatabaseUtilities.ConfigureDatabase<User>(modelBuilder);
+        // Configure inventory system with your User entity and ItemType enum
+        InventoryDatabaseUtilities.ConfigureDatabase<User, ItemType>(modelBuilder);
     }
 
     // Implement IInventoryDatabase
@@ -69,13 +69,26 @@ public class GameDbContext : BaseContext, IInventoryDatabase
 }
 ```
 
-### 3. Register Services
+### 3. Configure Enum Mapping
+
+Map your enum to PostgreSQL in your startup/infrastructure setup:
+
+```csharp
+var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+InventoryDatabaseUtilities.MapEnums<ItemType>(dataSourceBuilder);
+var dataSource = dataSourceBuilder.Build();
+
+services.AddDbContextPool<GameDbContext>(options => 
+    options.UseNpgsql(dataSource));
+```
+
+### 4. Register Services
 
 ```csharp
 services.AddKarizmaInventory<ItemType, GameCurrency, GameDbContext>();
 ```
 
-### 4. Populate Your Database
+### 5. Populate Your Database
 
 Add items directly to the `inventory_items` table:
 
@@ -90,7 +103,7 @@ VALUES
 
 **Note**: Items with `price = null` or `price = ''` are considered free and will have `IsFree = true` in the DTO.
 
-### 5. Use the Inventory Processor
+### 6. Use the Inventory Processor
 
 ```csharp
 public class InventoryController : ControllerBase
@@ -203,13 +216,15 @@ Returns equipped items as a dictionary keyed by item type for quick lookups.
 |--------|------|-------------|
 | id | bigint | Primary key |
 | asset_key | varchar(100) | Unique identifier for the item |
-| type | varchar(50) | Item type (matches your enum) |
+| type | enum | PostgreSQL enum type (enforced at DB level) |
 | price | jsonb | Price as JSON (nullable for free items) |
 | display_order | int | Sort order for display |
 | can_be_purchased | bool | Whether item can be purchased |
 | created_date | timestamptz | Creation timestamp |
 | updated_date | timestamptz | Last update timestamp |
 | deleted_date | timestamptz | Soft delete timestamp |
+
+**Note**: The `type` column uses a PostgreSQL enum that matches your `TEnum` definition. This provides database-level validation ensuring only valid enum values can be inserted.
 
 ### `user_inventory_items`
 | Column | Type | Description |
@@ -248,6 +263,7 @@ KarizmaInventory.Application      (Business logic, processors)
 - **Generic-first**: Full generic support with `TEnum` for item types and `TPrice` for pricing
 - **Self-contained DI**: `AddKarizmaInventory()` handles all service registrations internally
 - **Database Agnostic Interface**: Consumer provides database implementation via generic parameter
+
 
 
 ## 🤝 Contributing
