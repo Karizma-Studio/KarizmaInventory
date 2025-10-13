@@ -11,6 +11,7 @@ namespace KarizmaPlatform.Inventory.SharedClasses.Dtos
         public bool IsFree { get; set; }
         public int DisplayOrder { get; set; }
         public bool CanBePurchased { get; set; }
+        public int MinLevel { get; set; }
         public bool IsOwned { get; set; }
         public bool IsEquipped { get; set; }
     }

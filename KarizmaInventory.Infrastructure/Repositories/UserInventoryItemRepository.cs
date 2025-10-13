@@ -67,6 +67,13 @@ public class UserInventoryItemRepository(IInventoryDatabase inventoryDatabase) :
             .Where(ui => ui.UserId == userId && ui.IsEquipped)
             .ToListAsync();
     }
+
+    public Task<int> UnequipItemsByType(long userId, string itemType)
+    {
+        return inventoryDatabase.GetUserInventoryItems()
+            .Where(ui => ui.UserId == userId && ui.IsEquipped && ui.InventoryItem != null && ui.InventoryItem.Type == itemType)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(ui => ui.IsEquipped, false));
+    }
 }
 
 

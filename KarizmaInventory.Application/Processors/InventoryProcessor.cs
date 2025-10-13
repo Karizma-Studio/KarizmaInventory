@@ -31,7 +31,8 @@ public class InventoryProcessor<TEnum, TPrice>(
                 IsFree = isFree,
                 DisplayOrder = item.DisplayOrder,
                 CanBePurchased = item.CanBePurchased,
-                IsOwned = userItemIds.Contains(item.Id),
+                MinLevel = item.MinLevel,
+                IsOwned = isFree || userItemIds.Contains(item.Id), // Free items are always owned
                 IsEquipped = equippedItemIds.Contains(item.Id)
             };
         }).OrderBy(item => item.DisplayOrder).ToList();
@@ -156,18 +157,7 @@ public class InventoryProcessor<TEnum, TPrice>(
         try
         {
             var itemTypeString = itemType.ToString();
-            var userItems = await userInventoryItemRepository.FindUserInventoryItems(userId);
-            var itemsOfType = userItems.Where(ui => 
-                ui.InventoryItem != null && 
-                ui.InventoryItem.Type == itemTypeString && 
-                ui.IsEquipped).ToList();
-
-            foreach (var item in itemsOfType)
-            {
-                item.IsEquipped = false;
-                await userInventoryItemRepository.Update(item);
-            }
-
+            await userInventoryItemRepository.UnequipItemsByType(userId, itemTypeString);
             return true;
         }
         catch (Exception e)
@@ -246,6 +236,7 @@ public class InventoryProcessor<TEnum, TPrice>(
                     IsFree = isFree,
                     DisplayOrder = ui.InventoryItem.DisplayOrder,
                     CanBePurchased = ui.InventoryItem.CanBePurchased,
+                    MinLevel = ui.InventoryItem.MinLevel,
                     IsOwned = true,
                     IsEquipped = ui.IsEquipped
                 }

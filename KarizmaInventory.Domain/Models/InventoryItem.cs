@@ -12,6 +12,7 @@ public class InventoryItem : BaseEntity
     [Column("price", TypeName = "jsonb")] public string? Price { get; set; }
     [Column("display_order")] public int DisplayOrder { get; set; }
     [Column("can_be_purchased")] public bool CanBePurchased { get; set; }
+    [Column("min_level")] public int MinLevel { get; set; } = 0;
 
 
     public TEnum GetTypeEnum<TEnum>() where TEnum : struct, Enum
