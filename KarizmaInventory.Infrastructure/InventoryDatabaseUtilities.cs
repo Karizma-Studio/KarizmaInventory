@@ -16,7 +16,10 @@ public class InventoryDatabaseUtilities
         
         modelBuilder.Entity<InventoryItem>()
             .Property(b => b.Type)
-            .HasColumnType(enumTypeName);
+            .HasColumnType(enumTypeName)
+            .HasConversion(
+                v => Enum.Parse<TEnum>(v),
+                v => v.ToString());
         modelBuilder.Entity<UserInventoryItem>()
             .HasOne<T>()
             .WithMany()
