@@ -5,7 +5,7 @@
         <GenerateGlobalUsings>false</GenerateGlobalUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>KarizmaPlatform.Inventory.SharedClasses</RootNamespace>
-        <Version>0.6.0</Version>
+        <Version>0.7.0</Version>
         <Title>Karizma Inventory SharedClasses</Title>
         <Authors>Karizma Studio</Authors>
         <Description>Shared Classes Layer of Karizma Inventory System</Description>
