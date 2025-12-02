@@ -6,6 +6,7 @@ namespace KarizmaPlatform.Inventory.SharedClasses.Dtos
     {
         public long Id { get; set; }
         public string AssetKey { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
         public TEnum Type { get; set; }
         public TPrice Price { get; set; } = default!;
         public bool IsFree { get; set; }
