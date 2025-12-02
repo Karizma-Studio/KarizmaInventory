@@ -25,6 +25,7 @@ public class InventoryProcessor<TEnum, TPrice>(
             return new InventoryItemDto<TEnum, TPrice>
             {
                 Id = item.Id,
+                Name = item.Name,
                 AssetKey = item.AssetKey,
                 Type = Enum.Parse<TEnum>(item.Type),
                 Price = price,
