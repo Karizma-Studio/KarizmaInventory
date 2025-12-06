@@ -10,10 +10,35 @@ public class InventoryProcessor<TEnum, TPrice>(
     IUserInventoryItemRepository userInventoryItemRepository,
     IInventoryItemRepository inventoryItemRepository) : IInventoryProcessor<TEnum, TPrice> where TEnum : struct, Enum
 {
-    public async Task<List<InventoryItemDto<TEnum, TPrice>>> GetAvailableInventoryItems(long userId)
+    public async Task<List<InventoryItemDto<TEnum, TPrice>>> GetAvailableInventoryItems(long? userId)
     {
         var allItems = await inventoryItemRepository.GetAll();
-        var userItems = await userInventoryItemRepository.FindUserInventoryItems(userId, false);
+        if (userId == null)
+        {
+            return allItems.Select(item =>
+            {
+                var isFree = string.IsNullOrEmpty(item.Price) || item.Price == "null";
+                var price = isFree ? default(TPrice)! : (DeserializePrice(item.Price) ?? default(TPrice)!);
+                
+                return new InventoryItemDto<TEnum, TPrice>
+                {
+                    Id = item.Id,
+                    Name = item.Name,
+                    AssetKey = item.AssetKey,
+                    Type = Enum.Parse<TEnum>(item.Type),
+                    Price = price,
+                    IsFree = isFree,
+                    DisplayOrder = item.DisplayOrder,
+                    CanBePurchased = item.CanBePurchased,
+                    MinLevel = item.MinLevel,
+                    IsOwned = isFree, // Free items are always owned, others are not
+                    IsEquipped = false
+                };
+            }).OrderBy(item => item.DisplayOrder).ToList();
+        }
+        
+        // When userId is provided, include user-specific data
+        var userItems = await userInventoryItemRepository.FindUserInventoryItems(userId.Value, false);
         var userItemIds = userItems.Select(ui => ui.InventoryItemId).ToHashSet();
         var equippedItemIds = userItems.Where(ui => ui.IsEquipped).Select(ui => ui.InventoryItemId).ToHashSet();
 
@@ -39,7 +64,7 @@ public class InventoryProcessor<TEnum, TPrice>(
         }).OrderBy(item => item.DisplayOrder).ToList();
     }
 
-    public async Task<List<InventoryItemDto<TEnum, TPrice>>> GetAvailableInventoryItemsByType(long userId, TEnum itemType)
+    public async Task<List<InventoryItemDto<TEnum, TPrice>>> GetAvailableInventoryItemsByType(long? userId, TEnum itemType)
     {
         var allItems = await GetAvailableInventoryItems(userId);
         return allItems.Where(item => item.Type.Equals(itemType)).ToList();

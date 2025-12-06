@@ -4,8 +4,8 @@ namespace KarizmaPlatform.Inventory.Application.Processors.Interfaces;
 
 public interface IInventoryProcessor<TEnum, TPrice> where TEnum : struct, Enum
 {
-    Task<List<InventoryItemDto<TEnum, TPrice>>> GetAvailableInventoryItems(long userId);
-    Task<List<InventoryItemDto<TEnum, TPrice>>> GetAvailableInventoryItemsByType(long userId, TEnum itemType);
+    Task<List<InventoryItemDto<TEnum, TPrice>>> GetAvailableInventoryItems(long? userId);
+    Task<List<InventoryItemDto<TEnum, TPrice>>> GetAvailableInventoryItemsByType(long? userId, TEnum itemType);
     Task<bool> AddInventoryItemToUser(long userId, long inventoryItemId);
     Task<bool> EquipInventoryItem(long userId, long inventoryItemId);
     Task<bool> UnequipInventoryItemsByType(long userId, TEnum itemType);
