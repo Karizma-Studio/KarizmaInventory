@@ -30,16 +30,16 @@ public class InventoryDatabaseUtilities
 
 
         modelBuilder.Entity<UserInventoryItem>()
-            .HasIndex(x => new { x.UserId })
-            .HasFilter("deleted_at IS NULL");
+            .HasIndex(x => new { x.UserId });
 
         modelBuilder.Entity<UserInventoryItem>()
-            .HasIndex(x => new { x.UserId, x.InventoryItemId })
-            .HasFilter("deleted_at IS NULL");
+            .HasIndex(x => new { x.UserId, x.InventoryItemId });
 
         modelBuilder.Entity<UserInventoryItem>()
-            .HasIndex(x => new { x.UserId, x.IsEquipped })
-            .HasFilter("deleted_at IS NULL");
+            .HasIndex(x => new { x.UserId, x.IsEquipped });
+
+        modelBuilder.Entity<InventoryItem>()
+            .HasIndex(x => x.Type);
 
         var entities = new[] { typeof(InventoryItem), typeof(UserInventoryItem) };
         
