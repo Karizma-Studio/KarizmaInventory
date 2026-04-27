@@ -37,6 +37,10 @@ public class InventoryDatabaseUtilities
             .HasIndex(x => new { x.UserId, x.InventoryItemId })
             .HasFilter("deleted_at IS NULL");
 
+        modelBuilder.Entity<UserInventoryItem>()
+            .HasIndex(x => new { x.UserId, x.IsEquipped })
+            .HasFilter("deleted_at IS NULL");
+
         var entities = new[] { typeof(InventoryItem), typeof(UserInventoryItem) };
         
         foreach (var entityType in entities)
