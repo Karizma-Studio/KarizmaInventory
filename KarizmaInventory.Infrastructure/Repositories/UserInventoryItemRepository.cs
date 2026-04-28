@@ -46,6 +46,7 @@ public class UserInventoryItemRepository(IInventoryDatabase inventoryDatabase) :
                 : inventoryDatabase.GetUserInventoryItems().AsNoTracking())
             .Include(ui => ui.InventoryItem)
             .Where(ui => ui.UserId == userId)
+            .AsSplitQuery()
             .ToListAsync();
     }
 
@@ -55,6 +56,7 @@ public class UserInventoryItemRepository(IInventoryDatabase inventoryDatabase) :
                 ? inventoryDatabase.GetUserInventoryItems()
                 : inventoryDatabase.GetUserInventoryItems().AsNoTracking())
             .Include(ui => ui.InventoryItem)
+            .AsSplitQuery()
             .SingleOrDefaultAsync(ui => ui.UserId == userId && ui.InventoryItemId == inventoryItemId);
     }
 
@@ -65,6 +67,7 @@ public class UserInventoryItemRepository(IInventoryDatabase inventoryDatabase) :
                 : inventoryDatabase.GetUserInventoryItems().AsNoTracking())
             .Include(ui => ui.InventoryItem)
             .Where(ui => ui.UserId == userId && ui.IsEquipped)
+            .AsSplitQuery()
             .ToListAsync();
     }
 

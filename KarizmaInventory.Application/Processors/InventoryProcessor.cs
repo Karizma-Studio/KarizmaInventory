@@ -153,17 +153,7 @@ public class InventoryProcessor<TEnum, TPrice>(
             }
 
             // Unequip all items of the same type
-            var userItems = await userInventoryItemRepository.FindUserInventoryItems(userId);
-            var itemsOfSameType = userItems.Where(ui => 
-                ui.InventoryItem != null && 
-                ui.InventoryItem.Type == itemType && 
-                ui.IsEquipped).ToList();
-
-            foreach (var item in itemsOfSameType)
-            {
-                item.IsEquipped = false;
-                await userInventoryItemRepository.Update(item);
-            }
+            await userInventoryItemRepository.UnequipItemsByType(userId, itemType);
 
             // Equip the selected item
             userInventoryItem.IsEquipped = true;
