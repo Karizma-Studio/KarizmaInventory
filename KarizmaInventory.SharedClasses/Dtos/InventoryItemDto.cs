@@ -2,13 +2,14 @@ using System;
 
 namespace KarizmaPlatform.Inventory.SharedClasses.Dtos
 {
-    public class InventoryItemDto<TEnum, TPrice> where TEnum : struct, Enum
+    public class InventoryItemDto<TEnum, TPrice, TMetadata> where TEnum : struct, Enum
     {
         public long Id { get; set; }
         public string AssetKey { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public TEnum Type { get; set; }
         public TPrice Price { get; set; } = default!;
+        public TMetadata Metadata { get; set; } = default!;
         public bool IsFree { get; set; }
         public int DisplayOrder { get; set; }
         public bool CanBePurchased { get; set; }
@@ -17,4 +18,3 @@ namespace KarizmaPlatform.Inventory.SharedClasses.Dtos
         public bool IsEquipped { get; set; }
     }
 }
-

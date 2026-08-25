@@ -4,8 +4,9 @@ A flexible and generic inventory management system for .NET applications, design
 
 ## 🚀 Features
 
-- **Generic Type System**: Define your own item types (`TEnum`) and price types (`TPrice`)
+- **Generic Type System**: Define your own item types (`TEnum`), price types (`TPrice`) and metadata types (`TMetadata`)
 - **Flexible Pricing**: Support for any currency type (int, custom classes) stored as JSONB
+- **Custom Metadata**: Attach any extra fields to an item through a JSONB `metadata` column deserialized into your own class
 - **Equipment System**: Users can equip one item per type simultaneously
 - **Free Items**: Items with null/empty price can be equipped without purchase
 - **Clean Architecture**: Separated layers with zero dependency on BaseContext
@@ -43,6 +44,17 @@ public class GameCurrency
 {
     public int Coins { get; set; }
     public int Gems { get; set; }
+}
+```
+
+Define whatever extra fields your items need. This class is stored per item in the `metadata` JSONB column:
+
+```csharp
+public class ItemMetadata
+{
+    public string? Rarity { get; set; }
+    public int Damage { get; set; }
+    public List<string> Tags { get; set; } = [];
 }
 ```
 
@@ -85,7 +97,7 @@ services.AddDbContextPool<GameDbContext>(options =>
 ### 4. Register Services
 
 ```csharp
-services.AddKarizmaInventory<ItemType, GameCurrency, GameDbContext>();
+services.AddKarizmaInventory<ItemType, GameCurrency, ItemMetadata, GameDbContext>();
 ```
 
 ### 5. Populate Your Database
@@ -93,36 +105,41 @@ services.AddKarizmaInventory<ItemType, GameCurrency, GameDbContext>();
 Add items directly to the `inventory_items` table:
 
 ```sql
-INSERT INTO inventory_items (id, asset_key, type, price, display_order, can_be_purchased)
+INSERT INTO inventory_items (id, asset_key, type, price, metadata, display_order, can_be_purchased)
 VALUES 
-  (1, 'BlueSkin', 'Skin', '{"Coins": 100, "Gems": 0}', 1, true),
-  (2, 'RedSkin', 'Skin', null, 2, true),  -- Free item (IsFree = true)
-  (3, 'CoolAvatar', 'Avatar', '{"Coins": 200, "Gems": 5}', 1, true),
-  (4, 'DefaultSkin', 'Skin', '', 0, false); -- Free default (empty string also counts as free)
+  (1, 'BlueSkin', 'Skin', '{"Coins": 100, "Gems": 0}', '{"Rarity": "Common", "Tags": ["starter"]}', 1, true),
+  (2, 'RedSkin', 'Skin', null, null, 2, true),  -- Free item (IsFree = true), no metadata
+  (3, 'CoolAvatar', 'Avatar', '{"Coins": 200, "Gems": 5}', '{"Rarity": "Epic"}', 1, true),
+  (4, 'DefaultSkin', 'Skin', '', '{"Damage": 5}', 0, false); -- Free default (empty string also counts as free)
 ```
 
 **Note**: Items with `price = null` or `price = ''` are considered free and will have `IsFree = true` in the DTO.
+
+**Note**: `metadata` is deserialized into your `TMetadata` class. When the column is `null`/empty, or the JSON does not
+match the class, `Metadata` on the DTO is `default` (`null` for reference types) — malformed JSON never throws.
+Fields missing from the JSON simply keep their default values, so you can add new fields to `TMetadata` without
+touching existing rows.
 
 ### 6. Use the Inventory Processor
 
 ```csharp
 public class InventoryController : ControllerBase
 {
-    private readonly IInventoryProcessor<ItemType, GameCurrency> _processor;
+    private readonly IInventoryProcessor<ItemType, GameCurrency, ItemMetadata> _processor;
 
-    public InventoryController(IInventoryProcessor<ItemType, GameCurrency> processor)
+    public InventoryController(IInventoryProcessor<ItemType, GameCurrency, ItemMetadata> processor)
     {
         _processor = processor;
     }
 
     [HttpGet("items")]
-    public async Task<List<InventoryItemDto<ItemType, GameCurrency>>> GetAvailableItems(long userId)
+    public async Task<List<InventoryItemDto<ItemType, GameCurrency, ItemMetadata>>> GetAvailableItems(long userId)
     {
         return await _processor.GetAvailableInventoryItems(userId);
     }
 
     [HttpGet("items/type/{type}")]
-    public async Task<List<InventoryItemDto<ItemType, GameCurrency>>> GetItemsByType(long userId, ItemType type)
+    public async Task<List<InventoryItemDto<ItemType, GameCurrency, ItemMetadata>>> GetItemsByType(long userId, ItemType type)
     {
         return await _processor.GetAvailableInventoryItemsByType(userId, type);
     }
@@ -142,13 +159,13 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("equipped")]
-    public async Task<List<UserInventoryItemDto<ItemType, GameCurrency>>> GetEquippedItems(long userId)
+    public async Task<List<UserInventoryItemDto<ItemType, GameCurrency, ItemMetadata>>> GetEquippedItems(long userId)
     {
         return await _processor.GetEquippedItems(userId);
     }
 
     [HttpGet("equipped/dictionary")]
-    public async Task<Dictionary<ItemType, UserInventoryItemDto<ItemType, GameCurrency>>> GetEquippedItemsDict(long userId)
+    public async Task<Dictionary<ItemType, UserInventoryItemDto<ItemType, GameCurrency, ItemMetadata>>> GetEquippedItemsDict(long userId)
     {
         return await _processor.GetEquippedItemsDictionary(userId);
     }
@@ -167,12 +184,12 @@ public class InventoryController : ControllerBase
 ### `GetAvailableInventoryItems(userId)`
 Returns all inventory items with user-specific context (IsOwned, IsEquipped, IsFree). Items are sorted by `DisplayOrder`.
 
-**Returns**: `List<InventoryItemDto<TEnum, TPrice>>`
+**Returns**: `List<InventoryItemDto<TEnum, TPrice, TMetadata>>`
 
 ### `GetAvailableInventoryItemsByType(userId, itemType)`
 Returns inventory items filtered by a specific type.
 
-**Returns**: `List<InventoryItemDto<TEnum, TPrice>>`
+**Returns**: `List<InventoryItemDto<TEnum, TPrice, TMetadata>>`
 
 ### `AddInventoryItemToUser(userId, itemId)`
 Adds an item to user's inventory. Returns false if already owned.
@@ -202,12 +219,12 @@ Removes an item from user's inventory.
 ### `GetEquippedItems(userId)`
 Returns all currently equipped items with full details, sorted by `DisplayOrder`. Ensures only one item per type is returned (data integrity).
 
-**Returns**: `List<UserInventoryItemDto<TEnum, TPrice>>`
+**Returns**: `List<UserInventoryItemDto<TEnum, TPrice, TMetadata>>`
 
 ### `GetEquippedItemsDictionary(userId)`
 Returns equipped items as a dictionary keyed by item type for quick lookups.
 
-**Returns**: `Dictionary<TEnum, UserInventoryItemDto<TEnum, TPrice>>`
+**Returns**: `Dictionary<TEnum, UserInventoryItemDto<TEnum, TPrice, TMetadata>>`
 
 ## 🗃️ Database Schema
 
@@ -218,6 +235,7 @@ Returns equipped items as a dictionary keyed by item type for quick lookups.
 | asset_key | varchar(100) | Unique identifier for the item |
 | type | enum | PostgreSQL enum type (enforced at DB level) |
 | price | jsonb | Price as JSON (nullable for free items) |
+| metadata | jsonb | Custom per-item fields as JSON, deserialized into `TMetadata` (nullable) |
 | display_order | int | Sort order for display |
 | can_be_purchased | bool | Whether item can be purchased |
 | created_date | timestamptz | Creation timestamp |
@@ -260,7 +278,7 @@ KarizmaInventory.Application      (Business logic, processors)
 
 - **No BaseContext Dependency**: Repositories only depend on `IInventoryDatabase`
 - **Interface-based**: All repositories implement `IRepository<T>` from `KarizmaPlatform.Core.Logic`
-- **Generic-first**: Full generic support with `TEnum` for item types and `TPrice` for pricing
+- **Generic-first**: Full generic support with `TEnum` for item types, `TPrice` for pricing and `TMetadata` for custom item fields
 - **Self-contained DI**: `AddKarizmaInventory()` handles all service registrations internally
 - **Database Agnostic Interface**: Consumer provides database implementation via generic parameter
 

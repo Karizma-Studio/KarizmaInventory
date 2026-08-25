@@ -9,19 +9,23 @@ namespace KarizmaPlatform.Inventory.Application.Extensions;
 
 public static class BuilderExtensions
 {
-    public static IServiceCollection AddKarizmaInventory<TEnum, TPrice, TDatabase>
-        (this IServiceCollection services) 
-        where TEnum : struct, Enum 
+    /// <summary>
+    /// Registers the inventory module.
+    /// <typeparamref name="TPrice"/> and <typeparamref name="TMetadata"/> are the classes the
+    /// jsonb "price" and "metadata" columns of inventory_items are deserialized into, so any extra
+    /// field can be added to an inventory item without changing this package.
+    /// </summary>
+    public static IServiceCollection AddKarizmaInventory<TEnum, TPrice, TMetadata, TDatabase>
+        (this IServiceCollection services)
+        where TEnum : struct, Enum
         where TDatabase : IInventoryDatabase
     {
         services
             .AddScoped<IInventoryItemRepository, InventoryItemRepository>()
             .AddScoped<IUserInventoryItemRepository, UserInventoryItemRepository>()
-            .AddScoped<IInventoryProcessor<TEnum, TPrice>, InventoryProcessor<TEnum, TPrice>>()
+            .AddScoped<IInventoryProcessor<TEnum, TPrice, TMetadata>, InventoryProcessor<TEnum, TPrice, TMetadata>>()
             .AddScoped<IInventoryDatabase>(provider => provider.GetRequiredService<TDatabase>());
 
         return services;
     }
 }
-
-
